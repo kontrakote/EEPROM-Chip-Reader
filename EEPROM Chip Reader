@@ -1,0 +1,105 @@
+/*
+ EEPROM Chip Reader code for the Arduino Mega
+*/
+
+#define memsize 8192
+
+int STS   = 13;  // Status Indicator
+
+int AP[16] = {22,24,26,28,30,32,34,36,38,40,42,44,46,48,50,52};
+int AD[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+int DP[8]  = {23,25,27,29,31,33,35,37};
+int DD[8]  = {0,0,0,0,0,0,0,0};
+
+int CE  = 4;
+int OE  = 3;
+int WE  = 2;
+
+int i;
+int j;
+int D;
+int A;
+
+void setup() {
+      
+  // Setup Control Pins
+  pinMode(CE, OUTPUT);
+  pinMode(WE, OUTPUT);
+  pinMode(OE, OUTPUT);
+  
+  // Disable Chip, and disable read and write.
+  digitalWrite(CE, LOW);
+  digitalWrite(WE, LOW);
+  digitalWrite(OE, LOW);
+
+  Serial.begin(115200);
+  
+  Serial.println("Reading EEPROM...");
+  
+  pinMode(STS,   OUTPUT);
+  digitalWrite(STS,HIGH);
+  
+  // Setup Address Pins 
+  for (i=0;i<16;i++) {
+    pinMode(AP[i],OUTPUT);
+  }
+  
+  // Setup Data Pins
+  for (i=0;i<8;i++) {
+    pinMode(DP[i],INPUT);
+  }
+
+  delay(1000);
+  
+  for (A=0;A<memsize;) {
+    
+    if (A<4096) Serial.print("0");
+    if (A<256)  Serial.print("0");
+    if (A<16)   Serial.print("0");
+    Serial.print(A,HEX);
+    Serial.print(" ");
+
+    for (j=0;j<16;j++) {
+    
+      // Setup Address Pins
+      for (i=0;i<16;i++) {
+        if((A&bit(i))>0) {
+          AD[i]=HIGH;
+        } else {
+          AD[i]=LOW;
+        }      
+        digitalWrite(AP[i],AD[i]);
+      }
+    
+      digitalWrite(CE,HIGH);      // Chip Enabled
+      digitalWrite(OE,HIGH);      // Read Enabled
+    
+      // Read Data Pins
+      D=0;
+      for (i=0;i<8;i++) {
+        DD[i]=digitalRead(DP[i]);
+        D=D+bit(i)*DD[i];
+      }
+    
+      digitalWrite(OE,LOW);     // Read Disabled
+      digitalWrite(CE,LOW);     // Chip Disabled
+    
+      if (D<16) Serial.print("0");
+      Serial.print(D,HEX);
+      Serial.print(" ");
+      
+      A++;
+    }
+    
+    Serial.println();
+    
+  }
+  
+}
+
+void loop() {
+  digitalWrite(STS, HIGH);   // set the LED on
+  delay(500);              // wait for a second
+  digitalWrite(STS, LOW);    // set the LED off
+  delay(500);              // wait for a second
+}
